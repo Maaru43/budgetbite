@@ -209,6 +209,4 @@ https://github.com/Maaru43/budgetbite
 
 Deployte App:
 
-```text
-Netlify-Link folgt nach Deployment
-```
+https://tubular-khapse-c2d92b.netlify.app
