@@ -1,38 +1,42 @@
 <!-- src/lib/components/MealCard.svelte -->
 <script>
-	let { meal } = $props();
+ import { favoriteIds } from '$lib/stores/favorites.js';
+ let { meal, hint = '' } = $props();
+
+ function formatPrice(value) {
+  return Number(value).toFixed(2);
+ }
 </script>
 
-<div class="meal-card">
-	<h3>{meal.name}</h3>
-	<p>Preis: {meal.price} CHF</p>
-	<p>Zeit: {meal.time} Minuten</p>
-	<p>Kategorie: {meal.category}</p>
-	<a href="/meals/{meal.id}">Details anzeigen</a>
-</div>
+<article class="card">
+ <div class="card-header">
+  <div>
+   <h2 class="card-title">{meal.name}</h2>
+   <p class="card-meta">{meal.category}</p>
+  </div>
+  <div class="card-header-right">
+   <span class="pill-small">{formatPrice(meal.price)} CHF</span>
+   {#if $favoriteIds.includes(meal.id)}
+    <span class="pill-small favorite-pill">♥ Favorit</span>
+   {/if}
+  </div>
+ </div>
 
-<style>
-	.meal-card {
-		border: 1px solid #ddd;
-		border-radius: 8px;
-		padding: 16px;
-		margin: 8px;
-		background-color: #f9f9f9;
-		max-width: 300px;
-	}
-	.meal-card h3 {
-		margin: 0 0 8px 0;
-	}
-	.meal-card p {
-		margin: 4px 0;
-	}
-	.meal-card a {
-		display: inline-block;
-		margin-top: 8px;
-		color: #007bff;
-		text-decoration: none;
-	}
-	.meal-card a:hover {
-		text-decoration: underline;
-	}
-</style>
+ <div class="card-row">
+  <span class="pill-small">{meal.time} min</span>
+  {#if meal.vegetarian}
+   <span class="pill-small">Vegetarisch</span>
+  {/if}
+  {#if meal.hearty}
+   <span class="pill-small">Sättigend</span>
+  {/if}
+ </div>
+
+ {#if hint}
+  <p class="card-hint">{hint}</p>
+ {/if}
+
+ <div class="page-actions" style="margin-top: 18px;">
+  <a class="secondary-button" href={`/meals/${meal.id}`}>Details anzeigen</a>
+ </div>
+</article>

@@ -1,75 +1,90 @@
 <!-- src/routes/meals/new/+page.svelte -->
 <script>
-	let name = $state('');
-	let price = $state('');
-	let time = $state('');
-	let category = $state('');
-	let ingredients = $state('');
-	let submitted = $state(false);
+ import { addMeal, buildMeal } from '$lib/stores/meals.js';
+ const categories = ['Günstig', 'Schnell', 'Vegetarisch', 'Sättigend', 'Pasta', 'Reis', 'Wrap', 'Snack', 'Frühstück'];
+ let name = $state('');
+ let price = $state('');
+ let time = $state('');
+ let category = $state('');
+ let ingredients = $state('');
+ let submitted = $state(false);
+ let priceError = $state('');
 
-	function submitForm(event) {
-		event.preventDefault();
-		// Hier würden wir normalerweise die Daten speichern
-		console.log({ name, price, time, category, ingredients });
-		submitted = true;
-	}
+ function parsePriceValue(value) {
+	 const normalized = String(value).trim().replace(',', '.');
+	 if (!normalized) return null;
+	 const number = Number(normalized);
+	 if (Number.isNaN(number) || number < 0) return null;
+	 return Number(number.toFixed(2));
+ }
+
+ function submitForm(event) {
+	 event.preventDefault();
+	 priceError = '';
+	 const parsedPrice = parsePriceValue(price);
+	 if (parsedPrice === null) {
+	  priceError = 'Bitte gib einen gültigen Preis ein, z.B. 4.20.';
+	  return;
+	 }
+	 const meal = buildMeal({ name, price: parsedPrice, time, category, ingredients });
+	 addMeal(meal);
+	 submitted = true;
+ }
 </script>
 
-<h2>Neue Mahlzeit erfassen</h2>
+<section class="page-card">
+ <h1 class="section-title">Neue Mahlzeit erfassen</h1>
+ <p class="section-subtitle">Erfasse deine eigene Rezeptidee für BudgetBite.</p>
 
-{#if submitted}
-	<p style="color: green;">Mahlzeit erfolgreich erfasst!</p>
-{:else}
-	<form onsubmit={submitForm}>
-		<label>
-			Name:
-			<input type="text" bind:value={name} required />
-		</label>
-		<label>
-			Preis (CHF):
-			<input type="number" bind:value={price} required />
-		</label>
-		<label>
-			Zeit (Minuten):
-			<input type="number" bind:value={time} required />
-		</label>
-		<label>
-			Kategorie:
-			<input type="text" bind:value={category} required />
-		</label>
-		<label>
-			Zutaten (kommagetrennt):
-			<input type="text" bind:value={ingredients} required />
-		</label>
-		<button type="submit">Speichern</button>
-	</form>
-{/if}
+ {#if submitted}
+  <p class="status-text">Mahlzeit erfolgreich erfasst!</p>
+  <div class="page-actions">
+   <a href="/meals" class="primary-button">Alle Mahlzeiten</a>
+  </div>
+ {:else}
+  <form class="form-grid" onsubmit={submitForm}>
+   <label class="form-label">
+    Name
+    <input class="input-field" type="text" bind:value={name} required />
+   </label>
 
-<style>
-	form {
-		display: flex;
-		flex-direction: column;
-		max-width: 400px;
-	}
-	label {
-		margin-bottom: 10px;
-		display: flex;
-		flex-direction: column;
-	}
-	input {
-		margin-top: 5px;
-		padding: 5px;
-	}
-	button {
-		margin-top: 20px;
-		padding: 10px;
-		background-color: #007bff;
-		color: white;
-		border: none;
-		border-radius: 5px;
-		cursor: pointer;
-	}
-	button:hover {
-		background-color: #0056b3;
-	}
-</style>
+   <label class="form-label">
+    Preis (CHF)
+    <input
+     class="input-field"
+     type="text"
+     inputmode="decimal"
+     bind:value={price}
+     placeholder="z.B. 4.20"
+     oninput={() => (priceError = '')}
+     required
+    />
+    {#if priceError}
+     <p class="status-text" style="color: #dc2626;">{priceError}</p>
+    {/if}
+   </label>
+
+   <label class="form-label">
+    Zeit (Minuten)
+    <input class="input-field" type="number" step="1" min="1" bind:value={time} required />
+   </label>
+
+   <label class="form-label">
+    Kategorie
+    <select class="input-field" bind:value={category} required>
+     <option value="" disabled hidden>Wähle eine Kategorie</option>
+     {#each categories as option}
+      <option value={option}>{option}</option>
+     {/each}
+    </select>
+   </label>
+
+   <label class="form-label">
+    Zutaten (kommagetrennt)
+    <input class="input-field" type="text" bind:value={ingredients} placeholder="z.B. Pasta, Tomatensauce, Gewürze" required />
+   </label>
+
+   <button class="primary-button" type="submit">Speichern</button>
+  </form>
+ {/if}
+</section>
