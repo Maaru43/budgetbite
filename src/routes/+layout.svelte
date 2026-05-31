@@ -16,6 +16,7 @@
    <a href="/favorites">Favoriten</a>
    <a href="/meals">Alle Mahlzeiten</a>
    <a href="/meals/new">Neue Mahlzeit</a>
+   <a href="/planner">Wochenplan</a>
   </div>
  </nav>
 
