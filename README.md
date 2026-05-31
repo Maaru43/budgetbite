@@ -1,65 +1,214 @@
 # BudgetBite
 
-BudgetBite ist eine Webanwendung, die Studierenden hilft, günstige und schnelle Mahlzeiten zu finden. Entwickelt mit SvelteKit für ein mobiles und benutzerfreundliches Erlebnis.
-
-## Zielgruppe
-
-- Studierende mit wenig Zeit und begrenztem Budget
-- Personen, die einfache, schnelle und kostengünstige Kochrezepte suchen
+BudgetBite ist ein mobiler Web-App-Prototyp für Studierende mit wenig Zeit und begrenztem Budget. Die Anwendung hilft dabei, günstige und schnelle Mahlzeiten zu finden, zu vergleichen, zu speichern und für die Woche zu planen.
 
 ## Problemstellung
 
-Viele Studierende haben einen hektischen Alltag und müssen Mahlzeiten zubereiten, die sowohl zeitsparend als auch budgetfreundlich sind. BudgetBite löst dieses Problem, indem es eine Plattform bietet, um passende Rezepte basierend auf Budget und Zeit zu filtern.
+Viele Studierende haben im Alltag wenig Zeit, ein begrenztes Budget und oft keine klare Idee, was sie schnell und günstig essen können. Bestehende Rezept-Apps sind häufig sehr umfangreich, nicht speziell auf Studierende ausgerichtet oder im Alltag zu komplex.
+
+BudgetBite konzentriert sich deshalb bewusst auf wenige, aber nützliche Kernfunktionen: Mahlzeiten finden, vergleichen, speichern und planen.
+
+## Zielgruppe
+
+Die Hauptzielgruppe sind Studierende, die:
+
+* wenig Zeit zum Kochen haben
+* ein begrenztes Budget haben
+* einfache und günstige Mahlzeiten suchen
+* schnell entscheiden möchten, was sie essen können
+* Mahlzeiten für den Alltag besser planen möchten
+
+## How-Might-We-Fragen
+
+* Wie könnten wir Studierenden helfen, mit wenig Geld passende Mahlzeiten zu finden?
+* Wie könnten wir die Essensplanung für Studierende einfacher und zeitsparender gestalten?
+* Wie könnten wir günstige und schnelle Mahlzeiten übersichtlich und motivierend darstellen?
 
 ## Hauptworkflow
 
-1. **Home (/)**: Startseite mit Einführung und Navigation
-2. **Mahlzeit finden (/find)**: Auswahl von Budget und Zeit, Anzeige gefilterter Ergebnisse
-3. **Ergebnisse**: Liste der passenden Mahlzeiten
-4. **Detailseite (/meals/[meal_id])**: Vollständige Informationen zu einer Mahlzeit
-5. **Favorit speichern**: Lokale Speicherung von Favoriten im UI
+Der zentrale Workflow der App orientiert sich am Mockup aus Übung 10:
 
-## Umgesetzte Seiten
+1. Nutzer:in öffnet die Startseite.
+2. Nutzer:in wählt eine Priorität, zum Beispiel günstig, schnell, vegetarisch oder sättigend.
+3. Nutzer:in wählt ein maximales Budget.
+4. Nutzer:in wählt die verfügbare Zeit.
+5. Die App zeigt passende Mahlzeiten an.
+6. Nutzer:in öffnet die Detailseite einer Mahlzeit.
+7. Nutzer:in kann die Mahlzeit als Favorit speichern oder einem Wochenplan hinzufügen.
 
-- `/`: Startseite mit Titel, Beschreibung und Navigationsbuttons
-- `/find`: Filterseite für Budget und Zeit
-- `/meals`: Liste aller Mahlzeiten
-- `/meals/new`: Formular zum Hinzufügen neuer Mahlzeiten
-- `/meals/[meal_id]`: Detailansicht einer Mahlzeit
+## Umgesetzte Funktionen
 
-## Verwendete Technologien
+Aktuell sind folgende Funktionen umgesetzt:
 
-- **SvelteKit**: Framework für die Web-App
-- **JavaScript**: Programmiersprache (ES6+)
-- **CSS**: Styling für responsive Design
-- **GitHub Copilot/Agent**: KI-Unterstützung bei der Entwicklung
+* Startseite mit mobilem App-Look
+* Mahlzeiten-Finder mit schrittweisem Auswahlprozess
+* Übersicht aller Mahlzeiten
+* Suchleiste für Mahlzeiten
+* Detailseite pro Mahlzeit
+* Favoritenfunktion
+* Favoritenübersicht
+* Neue Mahlzeit erfassen
+* Mahlzeiten löschen
+* Wochenplan-Seite als Prototyp
+* Mobile-first Design im BudgetBite-Stil
+* Speicherung mit localStorage
+* Deployment über Netlify vorgesehen
 
-## Aktueller Stand
+## Seitenstruktur
 
-- Lokale Beispieldaten werden verwendet (keine Datenbank)
-- Favoriten werden nur lokal im UI gespeichert
-- Nächster Schritt: Integration von MongoDB für persistente Daten
+Die App enthält folgende zentrale Seiten:
 
-## Installation und Start
+* `/`
+  Startseite von BudgetBite
 
-1. Abhängigkeiten installieren:
-   ```sh
-   npm install
-   ```
+* `/find`
+  Mahlzeiten-Finder mit Auswahl nach Priorität, Budget und Zeit
 
-2. Entwicklungsserver starten:
-   ```sh
-   npm run dev
-   ```
+* `/meals`
+  Übersicht aller Mahlzeiten mit Suchfunktion
 
-   Die App ist dann unter `http://localhost:5173` (oder ähnlich) verfügbar.
+* `/meals/new`
+  Formular zum Erfassen einer neuen Mahlzeit
 
-3. Für den Produktionsbuild:
-   ```sh
-   npm run build
-   npm run preview
-   ```
+* `/meals/[meal_id]`
+  Detailseite einer einzelnen Mahlzeit
+
+* `/favorites`
+  Übersicht der gespeicherten Favoriten
+
+* `/planner`
+  Wochenplan-Prototyp
+
+## Designentscheidungen
+
+Das Design wurde bewusst als mobile-first App gestaltet, weil BudgetBite im Alltag schnell und unkompliziert genutzt werden soll. Die Gestaltung orientiert sich am Mockup aus Übung 10.
+
+Wichtige Designentscheidungen:
+
+* mobile Darstellung mit begrenzter Breite
+* grün-cremefarbenes Farbschema passend zu Food, Budget und Alltag
+* klare Karten für Mahlzeiten
+* grosse Buttons für einfache Bedienung
+* kurze Texte und einfache Labels
+* Preis, Zeit und Kategorie werden direkt sichtbar angezeigt
+* einfache Navigation zwischen den wichtigsten Bereichen
+
+Das Ziel war nicht ein vollständig produktives System, sondern ein verständlicher, testbarer und alltagsnaher Prototyp.
+
+## Technische Umsetzung
+
+Verwendete Technologien:
+
+* SvelteKit
+* JavaScript
+* HTML
+* CSS
+* localStorage
+* Git und GitHub
+* Netlify für Deployment
+* VS Code
+* GitHub Copilot / ChatGPT als KI-Unterstützung
+
+## Datenhaltung
+
+Im aktuellen Prototyp werden Daten clientseitig mit `localStorage` gespeichert. Dadurch können Mahlzeiten, Favoriten und Planungsinformationen im Browser gespeichert werden.
+
+Diese Lösung ist für den Prototyp geeignet, weil sie einfach ist und ohne Backend funktioniert. Für eine produktivere Version wäre eine Datenbankanbindung mit MongoDB sinnvoll. Damit könnten Daten zentral gespeichert und auf mehreren Geräten verfügbar gemacht werden.
+
+## Installation und lokaler Start
+
+Projekt klonen oder herunterladen und im Projektordner ausführen:
+
+```bash
+npm install
+npm run dev
+```
+
+Danach kann die App lokal im Browser geöffnet werden:
+
+```text
+http://localhost:5173/
+```
+
+## Build
+
+Um zu prüfen, ob das Projekt gebaut werden kann:
+
+```bash
+npm run build
+```
+
+## Deployment mit Netlify
+
+Für das finale Deployment ist Netlify vorgesehen, da Netlify im Unterricht verwendet wurde.
+
+Geplantes Vorgehen:
+
+1. Code auf GitHub pushen.
+2. In Netlify ein neues Projekt aus dem GitHub-Repository importieren.
+3. Build Command setzen:
+
+```bash
+npm run build
+```
+
+4. SvelteKit für Netlify konfigurieren, falls nötig mit:
+
+```bash
+npm install -D @sveltejs/adapter-netlify
+```
+
+5. In `svelte.config.js` den Netlify-Adapter verwenden.
+6. Deployment starten.
+7. Netlify-Link in Moodle abgeben.
 
 ## KI-Einsatz
 
-Der VS-Code-Agent (GitHub Copilot) wurde extensiv für die Erstellung der Grundstruktur, Komponenten, Routing und Styling eingesetzt. Dies ermöglichte eine schnelle Prototypentwicklung und die Implementierung von Svelte 5 Syntax.
+Für die Entwicklung wurde KI unterstützend eingesetzt. Die KI wurde verwendet für:
+
+* Planung der Seitenstruktur
+* Erstellung und Überarbeitung von SvelteKit-Komponenten
+* Unterstützung beim Routing
+* Verbesserung des Designs
+* Debugging von Favoriten-, Detail- und Wochenplan-Funktionen
+* Formulierung und Strukturierung der Dokumentation
+
+Die generierten Inhalte wurden schrittweise getestet, angepasst und versioniert. KI wurde nicht blind übernommen, sondern als Unterstützung im Entwicklungsprozess verwendet.
+
+## Aktueller Stand und bekannte Einschränkungen
+
+Der aktuelle Stand ist ein funktionsfähiger Prototyp mit mehreren Kernfunktionen. Einzelne Funktionen sind bewusst noch vereinfacht umgesetzt.
+
+Bekannte Einschränkungen:
+
+* Daten werden aktuell nur im Browser gespeichert.
+* Es gibt noch keine Benutzerkonten.
+* Die MongoDB-Anbindung ist noch nicht umgesetzt.
+* Der Wochenplan ist als Prototyp-Feature umgesetzt und kann weiter verbessert werden.
+* Die App ist nicht als produktive Anwendung gedacht, sondern als Prototyp zur Demonstration und Evaluation.
+
+## Mögliche Weiterentwicklung
+
+Mögliche nächste Schritte wären:
+
+* MongoDB-Anbindung für echte Datenpersistenz
+* bessere Zutatenfilterung
+* Bearbeiten von bestehenden Mahlzeiten
+* verbesserter Wochenplan
+* Einkaufsliste basierend auf geplanten Mahlzeiten
+* Usability-Test mit Studierenden
+* Optimierung auf Basis des Nutzerfeedbacks
+
+## Links
+
+GitHub Repository:
+
+```text
+https://github.com/Maaru43/budgetbite
+```
+
+Deployte App:
+
+```text
+Netlify-Link folgt nach Deployment
+```

@@ -1,123 +1,225 @@
+<!-- src/routes/meals/[meal_id]/+page.svelte -->
 <script>
- import { meals } from '$lib/stores/meals.js';
- import { favoriteIds } from '$lib/stores/favorites.js';
+ import { meals, removeMeal } from '$lib/stores/meals.js';
  import { page } from '$app/stores';
+ import { goto } from '$app/navigation';
+ import { favoriteIds, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
 
- let searchTerm = $state('');
+ let mealId = $derived($page.params.meal_id);
+ let meal = $state(null);
+ let isFavorite = $state(false);
+ let statusMessage = $state('');
+ let statusType = $state('success');
+
+ let selectedDay = $state('Montag');
+
+ const weekDays = [
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+  'Sonntag'
+ ];
 
  function formatPrice(value) {
   return Number(value).toFixed(2);
  }
 
- function getIngredientsText(meal) {
-  if (!meal.ingredients) return '';
-  if (Array.isArray(meal.ingredients)) return meal.ingredients.join(' ');
-  return meal.ingredients;
+ function getTime(meal) {
+  return meal.timeMinutes ?? meal.time ?? 0;
  }
 
- let filteredMeals = $derived(
-  $meals.filter((meal) => {
-   const search = searchTerm.toLowerCase().trim();
+ function getIngredients(meal) {
+  if (!meal.ingredients) return [];
+  if (Array.isArray(meal.ingredients)) return meal.ingredients;
+  return meal.ingredients.split(',').map((ingredient) => ingredient.trim());
+ }
 
-   if (!search) return true;
+ $effect(() => {
+  meal = $meals.find((m) => String(m.id) === String(mealId));
 
-   const searchableText = [
-    meal.name,
-    meal.category,
-    meal.tags?.join(' '),
-    getIngredientsText(meal)
-   ]
-    .join(' ')
-    .toLowerCase();
+  if (meal) {
+   isFavorite = $favoriteIds.includes(meal.id);
+  }
+ });
 
-   return searchableText.includes(search);
-  })
- );
+ function toggleFavorite() {
+  if (!meal) return;
 
- let deletedMessage = $derived($page.url.searchParams.get('deleted') === 'true');
+  if (isFavorite) {
+   removeFavorite(meal.id);
+   statusMessage = 'Aus Favoriten entfernt.';
+   statusType = 'warning';
+   isFavorite = false;
+  } else {
+   addFavorite(meal.id);
+   statusMessage = 'Zu Favoriten hinzugefügt.';
+   statusType = 'success';
+   isFavorite = true;
+  }
+ }
+
+ function addToPlanner() {
+  if (!meal) return;
+
+  const savedPlan = localStorage.getItem('budgetbite-weekly-plan');
+  const weeklyPlan = savedPlan ? JSON.parse(savedPlan) : {};
+
+  if (!weeklyPlan[selectedDay]) {
+   weeklyPlan[selectedDay] = [];
+  }
+
+  const plannedMeal = {
+   id: meal.id,
+   name: meal.name,
+   price: meal.price,
+   time: meal.timeMinutes ?? meal.time,
+   category: meal.category
+  };
+
+  const alreadyPlanned = weeklyPlan[selectedDay].some(
+   (item) => String(item.id) === String(meal.id)
+  );
+
+  if (!alreadyPlanned) {
+   weeklyPlan[selectedDay] = [...weeklyPlan[selectedDay], plannedMeal];
+   localStorage.setItem('budgetbite-weekly-plan', JSON.stringify(weeklyPlan));
+
+   statusMessage = `Mahlzeit wurde für ${selectedDay} eingeplant.`;
+   statusType = 'success';
+
+   window.alert(`Mahlzeit wurde für ${selectedDay} eingeplant.`);
+  } else {
+   statusMessage = `Diese Mahlzeit ist bereits für ${selectedDay} eingeplant.`;
+   statusType = 'warning';
+
+   window.alert(`Diese Mahlzeit ist bereits für ${selectedDay} eingeplant.`);
+  }
+ }
+
+ function deleteMeal() {
+  if (!meal) return;
+
+  const confirmed = window.confirm('Möchtest du diese Mahlzeit wirklich löschen?');
+  if (!confirmed) return;
+
+  removeMeal(meal.id);
+  removeFavorite(meal.id);
+
+  const savedPlan = localStorage.getItem('budgetbite-weekly-plan');
+  const weeklyPlan = savedPlan ? JSON.parse(savedPlan) : {};
+
+  for (const day of Object.keys(weeklyPlan)) {
+   weeklyPlan[day] = weeklyPlan[day].filter(
+    (plannedMeal) => String(plannedMeal.id) !== String(meal.id)
+   );
+  }
+
+  localStorage.setItem('budgetbite-weekly-plan', JSON.stringify(weeklyPlan));
+
+  meal = null;
+  goto('/meals?deleted=true');
+ }
 </script>
 
-<section class="page-card">
- <span class="eyebrow">Mahlzeiten</span>
-
- <h1 class="section-title">Alle Mahlzeiten</h1>
-
- <p class="section-subtitle">
-  Durchsuche BudgetBite und finde günstige, schnelle Gerichte.
- </p>
-
- {#if deletedMessage}
-  <div class="status-alert success" role="status">
-   Mahlzeit wurde gelöscht.
-  </div>
- {/if}
-
- <label class="form-label search-box" for="meal-search">
-  Suche
-  <input
-   id="meal-search"
-   class="input-field"
-   type="text"
-   placeholder="Suche nach Name, Kategorie oder Zutaten..."
-   bind:value={searchTerm}
-  />
- </label>
-
- {#if filteredMeals.length > 0}
-  <div class="meals-grid">
-   {#each filteredMeals as meal}
-    <article class="card">
-     <div class="card-header">
-      <div>
-       <h2 class="card-title">{meal.name}</h2>
-       <p class="card-meta">{meal.category}</p>
-      </div>
-
-      <div class="card-header-right">
-       <span class="pill-small">{formatPrice(meal.price)} CHF</span>
-
-       {#if $favoriteIds.includes(meal.id)}
-        <span class="pill-small favorite-pill">♥ Favorit</span>
-       {/if}
-      </div>
-     </div>
-
-     <div class="card-row">
-      <span class="pill-small">{meal.time} min</span>
-
-      {#if meal.vegetarian}
-       <span class="pill-small">Vegetarisch</span>
-      {/if}
-
-      {#if meal.hearty}
-       <span class="pill-small">Sättigend</span>
-      {/if}
-     </div>
-
-     <div class="page-actions">
-      <a class="secondary-button" href={`/meals/${meal.id}`}>
-       Details anzeigen
-      </a>
-     </div>
-    </article>
-   {/each}
-  </div>
- {:else}
-  <div class="card">
-   <h2 class="card-title">Keine Mahlzeiten gefunden.</h2>
-   <p class="card-meta">
-    Versuche einen anderen Suchbegriff oder erfasse eine neue Mahlzeit.
-   </p>
-
-   <div class="page-actions">
-    <a class="primary-button" href="/meals/new">Neue Mahlzeit erfassen</a>
+{#if meal}
+ <section class="page-card detail-card">
+  <div class="card-header">
+   <div>
+    <span class="eyebrow">Mahlzeit</span>
+    <h1 class="section-title">{meal.name}</h1>
+    <p class="section-subtitle">{meal.category}</p>
    </div>
+
+   <span class="pill-small">{formatPrice(meal.price)} CHF</span>
   </div>
- {/if}
-</section>
+
+  <div class="detail-data">
+   <p><span class="card-label">Zeit:</span> {getTime(meal)} Minuten</p>
+   <p><span class="card-label">Kategorie:</span> {meal.category}</p>
+   <p><span class="card-label">Zutaten:</span> {getIngredients(meal).join(', ')}</p>
+  </div>
+
+  <div class="card-row">
+   {#if meal.vegetarian}
+    <span class="pill-small">Vegetarisch</span>
+   {/if}
+
+   {#if meal.hearty}
+    <span class="pill-small">Sättigend</span>
+   {/if}
+  </div>
+
+  <div class="planner-box">
+   <h2>Zum Wochenplan hinzufügen</h2>
+
+   <label class="form-label" for="planner-day">
+    Wochentag auswählen
+    <select id="planner-day" class="select-field" bind:value={selectedDay}>
+     {#each weekDays as day}
+      <option value={day}>{day}</option>
+     {/each}
+    </select>
+   </label>
+
+   <button class="primary-button" type="button" onclick={addToPlanner}>
+    Einplanen
+   </button>
+
+   <a class="secondary-button" href="/planner">
+    Zum Wochenplan
+   </a>
+  </div>
+
+  {#if statusMessage}
+   <div class="status-alert {statusType}" role="status">
+    {statusMessage}
+   </div>
+  {/if}
+
+  <div class="page-actions">
+   {#if isFavorite}
+    <button class="secondary-button" type="button" onclick={toggleFavorite}>
+     Favorit entfernen
+    </button>
+   {:else}
+    <button class="primary-button" type="button" onclick={toggleFavorite}>
+     Favorit speichern
+    </button>
+   {/if}
+
+   <button class="danger-button" type="button" onclick={deleteMeal}>
+    Löschen
+   </button>
+  </div>
+ </section>
+{:else}
+ <section class="page-card">
+  <span class="eyebrow">Nicht gefunden</span>
+  <h1 class="section-title">Mahlzeit nicht gefunden</h1>
+  <p class="section-subtitle">
+   Diese Mahlzeit existiert nicht mehr oder wurde gelöscht.
+  </p>
+
+  <div class="page-actions">
+   <a class="primary-button" href="/meals">Zurück zu allen Mahlzeiten</a>
+  </div>
+ </section>
+{/if}
 
 <style>
- .search-box {
-  margin: 20px 0;
+ .planner-box {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+ }
+
+ .planner-box h2 {
+  margin: 0;
+  font-size: 1.2rem;
  }
 </style>
