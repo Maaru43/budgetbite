@@ -1,15 +1,19 @@
 <!-- src/routes/meals/[meal_id]/+page.svelte -->
 <script>
+ import { onMount } from 'svelte';
  import { meals, removeMeal } from '$lib/stores/meals.js';
  import { page } from '$app/stores';
  import { goto } from '$app/navigation';
  import { favoriteIds, addFavorite, removeFavorite } from '$lib/stores/favorites.js';
 
  let mealId = $derived($page.params.meal_id);
+
  let meal = $state(null);
  let isFavorite = $state(false);
  let statusMessage = $state('');
  let statusType = $state('success');
+ let isLoading = $state(true);
+ let errorMessage = $state('');
 
  let selectedDay = $state('Montag');
 
@@ -22,6 +26,15 @@
   'Samstag',
   'Sonntag'
  ];
+
+ function normalizeMeal(meal) {
+  return {
+   ...meal,
+   id: meal.id ?? meal._id,
+   time: meal.time ?? meal.timeMinutes ?? 0,
+   timeMinutes: meal.timeMinutes ?? meal.time ?? 0
+  };
+ }
 
  function formatPrice(value) {
   return Number(value).toFixed(2);
@@ -37,12 +50,41 @@
   return meal.ingredients.split(',').map((ingredient) => ingredient.trim());
  }
 
- $effect(() => {
-  meal = $meals.find((m) => String(m.id) === String(mealId));
+ async function loadMeal() {
+  isLoading = true;
+  errorMessage = '';
 
-  if (meal) {
+  const localMeal = $meals.find((m) => String(m.id) === String(mealId));
+
+  if (localMeal) {
+   meal = normalizeMeal(localMeal);
    isFavorite = $favoriteIds.includes(meal.id);
+   isLoading = false;
+   return;
   }
+
+  try {
+   const response = await fetch(`/api/meals/${mealId}`);
+
+   if (!response.ok) {
+    meal = null;
+    return;
+   }
+
+   const data = await response.json();
+   meal = normalizeMeal(data);
+   isFavorite = $favoriteIds.includes(meal.id);
+  } catch (error) {
+   console.error(error);
+   errorMessage = 'Die Mahlzeit konnte nicht geladen werden.';
+   meal = null;
+  } finally {
+   isLoading = false;
+  }
+ }
+
+ onMount(() => {
+  loadMeal();
  });
 
  function toggleFavorite() {
@@ -99,11 +141,23 @@
   }
  }
 
- function deleteMeal() {
+ async function deleteMeal() {
   if (!meal) return;
 
   const confirmed = window.confirm('Möchtest du diese Mahlzeit wirklich löschen?');
   if (!confirmed) return;
+
+  try {
+   const response = await fetch(`/api/meals/${meal.id}`, {
+    method: 'DELETE'
+   });
+
+   if (!response.ok) {
+    console.warn('Mahlzeit konnte nicht aus MongoDB gelöscht werden oder ist lokal.');
+   }
+  } catch (error) {
+   console.warn('MongoDB-Löschung fehlgeschlagen. Lokale Löschung wird trotzdem versucht.', error);
+  }
 
   removeMeal(meal.id);
   removeFavorite(meal.id);
@@ -124,7 +178,12 @@
  }
 </script>
 
-{#if meal}
+{#if isLoading}
+ <section class="page-card">
+  <span class="eyebrow">Laden</span>
+  <h1 class="section-title">Mahlzeit wird geladen...</h1>
+ </section>
+{:else if meal}
  <section class="page-card detail-card">
   <div class="card-header">
    <div>
@@ -199,9 +258,14 @@
  <section class="page-card">
   <span class="eyebrow">Nicht gefunden</span>
   <h1 class="section-title">Mahlzeit nicht gefunden</h1>
-  <p class="section-subtitle">
-   Diese Mahlzeit existiert nicht mehr oder wurde gelöscht.
-  </p>
+
+  {#if errorMessage}
+   <p class="section-subtitle">{errorMessage}</p>
+  {:else}
+   <p class="section-subtitle">
+    Diese Mahlzeit existiert nicht mehr oder wurde gelöscht.
+   </p>
+  {/if}
 
   <div class="page-actions">
    <a class="primary-button" href="/meals">Zurück zu allen Mahlzeiten</a>

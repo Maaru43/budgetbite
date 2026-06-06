@@ -1,4 +1,5 @@
 <script>
+ import { onMount } from 'svelte';
  import { page } from '$app/stores';
  import { meals } from '$lib/stores/meals.js';
  import MealCard from '$lib/components/MealCard.svelte';
@@ -20,10 +21,49 @@
  let budget = $state('egal');
  let time = $state('egal');
  let availableIngredients = $state('');
- let filteredMeals = $state([]);
+
+ let mongoMeals = $state([]);
+ let isLoading = $state(true);
+ let errorMessage = $state('');
+
+ function normalizeMeal(meal) {
+  return {
+   ...meal,
+   id: meal.id ?? meal._id,
+   time: meal.time ?? meal.timeMinutes ?? 0,
+   timeMinutes: meal.timeMinutes ?? meal.time ?? 0
+  };
+ }
+
+ async function loadMealsFromMongoDB() {
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+   const response = await fetch('/api/meals');
+
+   if (!response.ok) {
+    throw new Error('MongoDB konnte nicht geladen werden.');
+   }
+
+   const data = await response.json();
+   mongoMeals = data.map(normalizeMeal);
+  } catch (error) {
+   console.error(error);
+   errorMessage =
+    'MongoDB konnte nicht geladen werden. Es werden lokale Beispielmahlzeiten verwendet.';
+   mongoMeals = [];
+  } finally {
+   isLoading = false;
+  }
+ }
+
+ onMount(() => {
+  loadMealsFromMongoDB();
+ });
 
  function normalizeIngredients(value) {
-  return value
+  return String(value)
    .split(',')
    .map((item) => item.trim().toLowerCase())
    .filter(Boolean);
@@ -36,54 +76,79 @@
  }
 
  function normalizeMealIngredients(meal) {
-  if (Array.isArray(meal.ingredients)) return meal.ingredients.map((item) => String(item).trim().toLowerCase()).filter(Boolean);
-  if (typeof meal.ingredients === 'string') return meal.ingredients.split(',').map((item) => item.trim().toLowerCase()).filter(Boolean);
+  if (Array.isArray(meal.ingredients)) {
+   return meal.ingredients
+    .map((item) => String(item).trim().toLowerCase())
+    .filter(Boolean);
+  }
+
+  if (typeof meal.ingredients === 'string') {
+   return meal.ingredients
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  }
+
   return [];
  }
 
+ let allMeals = $derived(
+  mongoMeals.length > 0
+   ? mongoMeals
+   : $meals.map(normalizeMeal)
+ );
+
+ let filteredMeals = $derived(
+  allMeals
+   .map((meal) => {
+    const mealTime = meal.timeMinutes ?? meal.time ?? 0;
+    const ownedIngredients = normalizeIngredients(availableIngredients);
+
+    let focusMatch = true;
+
+    if (focus === 'Günstig') {
+     focusMatch = meal.price <= 8;
+    } else if (focus === 'Schnell') {
+     focusMatch = mealTime <= 15;
+    } else if (focus === 'Vegetarisch') {
+     focusMatch = Boolean(meal.vegetarian);
+    } else if (focus === 'Sättigend') {
+     focusMatch = Boolean(meal.hearty);
+    }
+
+    const budgetLimit = parseInt(budget.replace(/[^0-9]/g, ''));
+    const timeLimit = parseInt(time.replace(/[^0-9]/g, ''));
+
+    const budgetMatch = budget === 'egal' || meal.price <= budgetLimit;
+    const timeMatch = time === 'egal' || mealTime <= timeLimit;
+
+    const mealIngredients = normalizeMealIngredients(meal);
+    const matchCount = mealIngredients.filter((ingredient) =>
+     ownedIngredients.includes(ingredient)
+    ).length;
+
+    const hint = getIngredientHint(matchCount, ownedIngredients.length > 0);
+    const sortScore = matchCount;
+
+    return {
+     meal,
+     hint,
+     focusMatch,
+     budgetMatch,
+     timeMatch,
+     sortScore
+    };
+   })
+   .filter((item) => item.focusMatch && item.budgetMatch && item.timeMatch)
+   .sort((a, b) => b.sortScore - a.sortScore || a.meal.name.localeCompare(b.meal.name))
+ );
+
  $effect(() => {
   const queryFocus = $page.url.searchParams.get('focus');
+
   if (queryFocus && focusParamMap[queryFocus]) {
    focus = focusParamMap[queryFocus];
   }
-
-  const ownedIngredients = normalizeIngredients(availableIngredients);
-  const unsubscribe = meals.subscribe(($meals) => {
-   filteredMeals = $meals
-    .map((meal) => {
-     let focusMatch = true;
-     if (focus === 'Günstig') {
-      focusMatch = meal.price <= 8;
-     } else if (focus === 'Schnell') {
-      focusMatch = meal.time <= 15;
-     } else if (focus === 'Vegetarisch') {
-      focusMatch = meal.vegetarian;
-     } else if (focus === 'Sättigend') {
-      focusMatch = meal.hearty;
-     }
-
-     let budgetMatch = budget === 'egal' || meal.price <= parseInt(budget.replace(/[^0-9]/g, ''));
-     let timeMatch = time === 'egal' || meal.time <= parseInt(time.replace(/[^0-9]/g, ''));
-
-     const mealIngredients = normalizeMealIngredients(meal);
-     const matchCount = mealIngredients.filter((ingredient) => ownedIngredients.includes(ingredient)).length;
-     const hint = getIngredientHint(matchCount, ownedIngredients.length > 0);
-     const sortScore = matchCount;
-
-     return {
-      meal,
-      hint,
-      focusMatch,
-      budgetMatch,
-      timeMatch,
-      sortScore
-     };
-    })
-    .filter((item) => item.focusMatch && item.budgetMatch && item.timeMatch)
-    .sort((a, b) => b.sortScore - a.sortScore || a.meal.name.localeCompare(b.meal.name));
-  });
-
-  return unsubscribe;
  });
 
  function selectFocus(option) {
@@ -126,6 +191,12 @@
  <h1 class="section-title">{getHeading()}</h1>
  <p class="section-subtitle">{getDescription()}</p>
 
+ {#if errorMessage}
+  <div class="status-alert warning" role="status">
+   {errorMessage}
+  </div>
+ {/if}
+
  {#if step === 1}
   <div class="option-grid">
    {#each focusOptions as option}
@@ -150,6 +221,7 @@
     </OptionPill>
    {/each}
   </div>
+
   <label class="form-label">
    Was hast du zuhause?
    <input
@@ -160,14 +232,18 @@
    />
   </label>
  {:else}
-  {#if filteredMeals.length > 0}
+  {#if isLoading}
+   <p class="section-subtitle">Mahlzeiten werden geladen...</p>
+  {:else if filteredMeals.length > 0}
    <div class="meals-grid">
     {#each filteredMeals as item}
      <MealCard meal={item.meal} hint={item.hint} />
     {/each}
    </div>
   {:else}
-   <p class="section-subtitle">Leider wurden keine Mahlzeiten gefunden. Passe deine Auswahl an und versuche es erneut.</p>
+   <p class="section-subtitle">
+    Leider wurden keine Mahlzeiten gefunden. Passe deine Auswahl an und versuche es erneut.
+   </p>
   {/if}
  {/if}
 
@@ -175,6 +251,7 @@
   {#if step > 1}
    <button type="button" class="secondary-button" onclick={previousStep}>Zurück</button>
   {/if}
+
   {#if step < 4}
    <button type="button" class="primary-button" onclick={nextStep}>Weiter</button>
   {:else}
