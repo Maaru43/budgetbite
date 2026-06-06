@@ -16,12 +16,13 @@
   hearty: 'Sättigend'
  };
 
- let initialStep = Number($page.url.searchParams.get('step')) || 1;
- let step = $state(initialStep);
- let focus = $state('Günstig');
- let budget = $state('egal');
- let time = $state('egal');
- let availableIngredients = $state('');
+let initialStep = Number($page.url.searchParams.get('step')) || 1;
+let step = $state(initialStep);
+
+let focus = $state($page.url.searchParams.get('focus') || 'Günstig');
+let budget = $state($page.url.searchParams.get('budget') || 'egal');
+let time = $state($page.url.searchParams.get('time') || 'egal');
+let availableIngredients = $state($page.url.searchParams.get('ingredients') || '');
 
  let mongoMeals = $state([]);
  let isLoading = $state(true);
@@ -152,6 +153,21 @@
   }
  });
 
+ function getFindReturnQuery() {
+ const params = new URLSearchParams();
+
+ params.set('step', '4');
+ params.set('focus', focus);
+ params.set('budget', budget);
+ params.set('time', time);
+
+ if (availableIngredients.trim()) {
+  params.set('ingredients', availableIngredients.trim());
+ }
+
+ return params.toString();
+}
+
  function selectFocus(option) {
   focus = option;
  }
@@ -238,7 +254,7 @@
   {:else if filteredMeals.length > 0}
    <div class="meals-grid">
     {#each filteredMeals as item}
-     <MealCard meal={item.meal} hint={item.hint} source="find" />
+     <MealCard meal={item.meal} hint={item.hint} source="find" returnQuery={getFindReturnQuery()} />
     {/each}
    </div>
   {:else}

@@ -50,6 +50,16 @@
   return meal.ingredients.split(',').map((ingredient) => ingredient.trim());
  }
 
+ function getBackToFindHref() {
+  const returnQuery = $page.url.searchParams.get('return');
+
+  if (returnQuery) {
+   return `/find?${returnQuery}`;
+  }
+
+  return '/find?step=4';
+ }
+
  async function loadMeal() {
   isLoading = true;
   errorMessage = '';
@@ -58,7 +68,7 @@
 
   if (localMeal) {
    meal = normalizeMeal(localMeal);
-   isFavorite = $favoriteIds.includes(meal.id);
+   isFavorite = $favoriteIds.includes(String(meal.id));
    isLoading = false;
    return;
   }
@@ -73,7 +83,7 @@
 
    const data = await response.json();
    meal = normalizeMeal(data);
-   isFavorite = $favoriteIds.includes(meal.id);
+   isFavorite = $favoriteIds.includes(String(meal.id));
   } catch (error) {
    console.error(error);
    errorMessage = 'Die Mahlzeit konnte nicht geladen werden.';
@@ -232,21 +242,21 @@
    </a>
   </div>
 
-{#if statusMessage}
- <div class="status-alert {statusType}" role="status">
-  {statusMessage}
- </div>
-{/if}
+  {#if statusMessage}
+   <div class="status-alert {statusType}" role="status">
+    {statusMessage}
+   </div>
+  {/if}
 
-{#if $page.url.searchParams.get('from') === 'find'}
- <div class="page-actions">
-  <a class="secondary-button" href="/find?step=4">
-   Zurück zu den Ergebnissen
-  </a>
- </div>
-{/if}
+  {#if $page.url.searchParams.get('from') === 'find'}
+   <div class="page-actions">
+    <a class="secondary-button" href={getBackToFindHref()}>
+     Zurück zu den Ergebnissen
+    </a>
+   </div>
+  {/if}
 
-<div class="page-actions">
+  <div class="page-actions">
    {#if isFavorite}
     <button class="secondary-button" type="button" onclick={toggleFavorite}>
      Favorit entfernen

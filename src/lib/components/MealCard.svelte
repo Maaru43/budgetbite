@@ -2,7 +2,7 @@
 <script>
  import { favoriteIds } from '$lib/stores/favorites.js';
 
- let { meal, hint = '', source = '' } = $props();
+ let { meal, hint = '', source = '', returnQuery = '' } = $props();
 
  function formatPrice(value) {
   return Number(value).toFixed(2);
@@ -12,9 +12,11 @@
   return meal.timeMinutes ?? meal.time ?? 0;
  }
 
- let detailHref = $derived(
-  source === 'find' ? `/meals/${meal.id}?from=find` : `/meals/${meal.id}`
- );
+let detailHref = $derived(
+ source === 'find'
+  ? `/meals/${meal.id}?from=find&return=${encodeURIComponent(returnQuery)}`
+  : `/meals/${meal.id}`
+);
 </script>
 
 <article class="card">
