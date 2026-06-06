@@ -16,7 +16,8 @@
   hearty: 'Sättigend'
  };
 
- let step = $state(1);
+ let initialStep = Number($page.url.searchParams.get('step')) || 1;
+ let step = $state(initialStep);
  let focus = $state('Günstig');
  let budget = $state('egal');
  let time = $state('egal');
@@ -237,7 +238,7 @@
   {:else if filteredMeals.length > 0}
    <div class="meals-grid">
     {#each filteredMeals as item}
-     <MealCard meal={item.meal} hint={item.hint} />
+     <MealCard meal={item.meal} hint={item.hint} source="find" />
     {/each}
    </div>
   {:else}

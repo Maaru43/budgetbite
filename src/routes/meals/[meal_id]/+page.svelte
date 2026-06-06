@@ -232,13 +232,21 @@
    </a>
   </div>
 
-  {#if statusMessage}
-   <div class="status-alert {statusType}" role="status">
-    {statusMessage}
-   </div>
-  {/if}
+{#if statusMessage}
+ <div class="status-alert {statusType}" role="status">
+  {statusMessage}
+ </div>
+{/if}
 
-  <div class="page-actions">
+{#if $page.url.searchParams.get('from') === 'find'}
+ <div class="page-actions">
+  <a class="secondary-button" href="/find?step=4">
+   Zurück zu den Ergebnissen
+  </a>
+ </div>
+{/if}
+
+<div class="page-actions">
    {#if isFavorite}
     <button class="secondary-button" type="button" onclick={toggleFavorite}>
      Favorit entfernen
