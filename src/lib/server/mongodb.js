@@ -1,19 +1,25 @@
 import { MongoClient } from 'mongodb';
-import { MONGODB_URI, MONGODB_DB } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
-if (!MONGODB_URI) {
-	throw new Error('MONGODB_URI fehlt in der .env Datei.');
-}
-
-const client = new MongoClient(MONGODB_URI);
-
+let client;
 let clientPromise;
 
 export async function getDb() {
+	const uri = env.MONGODB_URI;
+	const dbName = env.MONGODB_DB || 'budgetbite';
+
+	if (!uri || (!uri.startsWith('mongodb://') && !uri.startsWith('mongodb+srv://'))) {
+		throw new Error('MONGODB_URI fehlt oder ist ungültig.');
+	}
+
+	if (!client) {
+		client = new MongoClient(uri);
+	}
+
 	if (!clientPromise) {
 		clientPromise = client.connect();
 	}
 
 	const connectedClient = await clientPromise;
-	return connectedClient.db(MONGODB_DB || 'budgetbite');
+	return connectedClient.db(dbName);
 }
