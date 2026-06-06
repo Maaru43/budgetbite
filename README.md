@@ -602,7 +602,5 @@ Keine Zugangsdaten erforderlich.
 
 Weitere URLs:
 
-Weitere URLs:
-
 Getestete Version für Usability Evaluation:
 https://budgetbite-livid.vercel.app

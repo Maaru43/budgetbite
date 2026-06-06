@@ -2,11 +2,19 @@
  import { meals } from '$lib/stores/meals.js';
  import { favoriteIds } from '$lib/stores/favorites.js';
  import { page } from '$app/stores';
+ import { onMount } from 'svelte';
 
  let searchTerm = $state('');
+ let mongoMeals = $state([]);
+ let isLoading = $state(true);
+ let errorMessage = $state('');
 
  function formatPrice(value) {
   return Number(value).toFixed(2);
+ }
+
+ function getTime(meal) {
+  return meal.timeMinutes ?? meal.time ?? 0;
  }
 
  function getIngredientsText(meal) {
@@ -15,8 +23,50 @@
   return meal.ingredients;
  }
 
+ function normalizeMeal(meal) {
+  return {
+   ...meal,
+   id: meal.id ?? meal._id,
+   time: meal.time ?? meal.timeMinutes ?? 0,
+   timeMinutes: meal.timeMinutes ?? meal.time ?? 0
+  };
+ }
+
+ async function loadMealsFromMongoDB() {
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+   const response = await fetch('/api/meals');
+
+   if (!response.ok) {
+    throw new Error('Mahlzeiten konnten nicht aus MongoDB geladen werden.');
+   }
+
+   const data = await response.json();
+   mongoMeals = data.map(normalizeMeal);
+  } catch (error) {
+   console.error(error);
+   errorMessage =
+    'MongoDB konnte nicht geladen werden. Es werden lokale Beispielmahlzeiten angezeigt.';
+   mongoMeals = [];
+  } finally {
+   isLoading = false;
+  }
+ }
+
+ onMount(() => {
+  loadMealsFromMongoDB();
+ });
+
+ let allMeals = $derived(
+  mongoMeals.length > 0
+   ? mongoMeals
+   : $meals.map(normalizeMeal)
+ );
+
  let filteredMeals = $derived(
-  $meals.filter((meal) => {
+  allMeals.filter((meal) => {
    const search = searchTerm.toLowerCase().trim();
 
    if (!search) return true;
@@ -52,6 +102,18 @@
   </div>
  {/if}
 
+ {#if errorMessage}
+  <div class="status-alert warning" role="status">
+   {errorMessage}
+  </div>
+ {/if}
+
+ {#if isLoading}
+  <div class="status-alert success" role="status">
+   Mahlzeiten werden aus MongoDB geladen...
+  </div>
+ {/if}
+
  <label class="form-label search-box" for="meal-search">
   Suche
   <input
@@ -83,7 +145,7 @@
      </div>
 
      <div class="card-row">
-      <span class="pill-small">{meal.time} min</span>
+      <span class="pill-small">{getTime(meal)} min</span>
 
       {#if meal.vegetarian}
        <span class="pill-small">Vegetarisch</span>
