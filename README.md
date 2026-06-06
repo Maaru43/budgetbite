@@ -53,8 +53,8 @@ BudgetBite ist ein mobiler Web-App-Prototyp für günstige und schnelle Mahlzeit
 
   * BudgetBite ist ein Prototyp und keine produktive App.
   * Es gibt keine Benutzerkonten.
-  * Die Daten werden aktuell clientseitig mit localStorage gespeichert.
-  * Eine MongoDB-Anbindung ist als mögliche Weiterentwicklung vorgesehen, wurde aber nicht final umgesetzt.
+  * Mahlzeitendaten werden über eine MongoDB-Datenbank gespeichert und über eine SvelteKit-API geladen, erstellt und gelöscht.
+  * Favoriten und Wochenplan werden im Prototyp weiterhin clientseitig gespeichert, weil dafür keine Benutzerkonten umgesetzt wurden.
   * Der Wochenplan ist als Prototyp-Feature umgesetzt und kann weiter verbessert werden.
 
 ## 3. Vorgehen & Artefakte
@@ -205,15 +205,17 @@ Wichtige UI-Elemente:
   * JavaScript
   * HTML
   * CSS
-  * localStorage
-  * Git und GitHub
+  * MongoDB Atlas
+  * MongoDB Node.js Driver
   * Netlify
+  * Git und GitHub
 
 * **Tooling:**
 
   * Visual Studio Code
   * GitHub
   * Netlify
+  * MongoDB Compass
   * Browser Developer Tools
   * GitHub Copilot / Agent-Unterstützung
   * ChatGPT für Planung, Debugging und Dokumentationsentwürfe
@@ -229,14 +231,16 @@ Die App ist mit SvelteKit-Routen umgesetzt. Wichtige Seiten sind:
 * `/meals/[meal_id]` Detailseite
 * `/favorites` Favoritenübersicht
 * `/planner` Wochenplan
+* `/api/meals` API-Endpunkt für Mahlzeitendaten
+* `/api/meals/[meal_id]` API-Endpunkt für einzelne Mahlzeiten und Löschen
 
 Wichtige Daten- und Logikbereiche:
 
-* Mahlzeitendaten
+* Mahlzeitendaten aus MongoDB
+
+* API-Routen für Laden, Erstellen und Löschen von Mahlzeiten
 
 * Favoriten-Logik
-
-* lokale Speicherung
 
 * Suchfunktion
 
@@ -244,11 +248,22 @@ Wichtige Daten- und Logikbereiche:
 
 * Wochenplan-Prototyp
 
+* clientseitige Speicherung für Favoriten und Wochenplan
+
 * **Daten & Schnittstellen:**
 
-Im aktuellen Prototyp werden Daten clientseitig gespeichert. Dafür wird `localStorage` verwendet. Dadurch können im Browser gespeicherte Mahlzeiten, Favoriten und Planungsinformationen erhalten bleiben.
+Die Mahlzeitendaten werden in MongoDB Atlas gespeichert. Die Verbindung erfolgt über eine serverseitige Datei in `src/lib/server/mongodb.js`. Die Zugangsdaten werden nicht im Code gespeichert, sondern über Umgebungsvariablen verwaltet.
 
-Diese Lösung ist für einen Prototyp geeignet, weil sie ohne Backend funktioniert und schnell testbar ist. Für eine produktivere Version wäre eine zentrale Datenbank, z.B. MongoDB, sinnvoll. Damit könnten Daten geräteübergreifend gespeichert und später mit Benutzerkonten verbunden werden.
+Verwendete Umgebungsvariablen:
+
+```text
+MONGODB_URI
+MONGODB_DB
+```
+
+Die App verwendet SvelteKit-API-Routen, um Daten zwischen Frontend und Datenbank auszutauschen. Über `/api/meals` können Mahlzeiten geladen und neue Mahlzeiten gespeichert werden. Über `/api/meals/[meal_id]` können einzelne Mahlzeiten gelöscht werden.
+
+Für Favoriten und Wochenplan wird weiterhin `localStorage` verwendet. Der Grund dafür ist, dass der Prototyp keine Benutzerkonten besitzt. Dadurch können persönliche Favoriten und Planungen lokal im Browser gespeichert werden, ohne ein Login-System umzusetzen.
 
 * **Deployment:**
 
@@ -268,10 +283,12 @@ https://github.com/Maaru43/budgetbite
 
 * **Besondere Entscheidungen:**
 
-  * localStorage wurde verwendet, um den Prototyp stabil und ohne Backend lauffähig zu halten.
-  * MongoDB wurde bewusst als spätere Erweiterung vorgesehen, da zuerst ein stabiler Frontend-Prototyp im Vordergrund stand.
-  * Der Wochenplan wurde als Prototyp-Feature umgesetzt, auch wenn dieser noch weiter verbessert werden kann.
-  * Netlify wurde für das Deployment verwendet, da dies im Unterricht behandelt wurde.
+  * MongoDB wurde eingebaut, damit Mahlzeiten persistent in einer Datenbank gespeichert werden können.
+  * Die Datenbankverbindung wurde serverseitig umgesetzt, damit der MongoDB Connection String nicht im Frontend sichtbar ist.
+  * Umgebungsvariablen werden lokal über `.env` und online über Netlify Environment Variables verwaltet.
+  * Der MongoDB Client wird lazy initialisiert, damit der Netlify-Build nicht wegen fehlender oder noch nicht verfügbarer Runtime-Variablen fehlschlägt.
+  * Favoriten und Wochenplan bleiben bewusst im localStorage, weil diese Funktionen im Prototyp personenbezogen sind, aber kein Login-System umgesetzt wurde.
+  * Netlify wurde für das Deployment verwendet, da die App dadurch online zugänglich ist und direkt über das GitHub-Repository aktualisiert werden kann.
 
 ### 3.5 Validate
 
@@ -453,7 +470,7 @@ Die Evaluation zeigte, dass die Grundidee von BudgetBite verständlich ist und d
 ### 4.3 Neue Mahlzeit erfassen
 
 * **Beschreibung & Nutzen:** Nutzer können eigene einfache Mahlzeiten hinzufügen. Dadurch wird der Prototyp interaktiver und weniger statisch.
-* **Wo umgesetzt:** Formular auf `/meals/new`, Speicherung im localStorage.
+* **Wo umgesetzt:** Formular auf `/meals/new`, Speicherung über `/api/meals` in MongoDB.
 * **Referenz:** Seite „Neue Mahlzeit“.
 * **Aus Evaluation abgeleitet?:** Teilweise. Die Funktion unterstützt den Kernworkflow und wurde zusätzlich als sinnvolle Interaktion umgesetzt.
 
@@ -471,6 +488,25 @@ Die Evaluation zeigte, dass die Grundidee von BudgetBite verständlich ist und d
 * **Referenz:** `https://budgetbite-maaru43.netlify.app`
 * **Aus Evaluation abgeleitet?:** Nein, aber für Test und Abgabe notwendig.
 
+### 4.6 MongoDB-Anbindung
+
+* **Beschreibung & Nutzen:** Die Mahlzeitendaten werden nicht mehr nur statisch oder lokal verwaltet, sondern in einer MongoDB-Datenbank gespeichert. Dadurch bleiben neu erfasste Mahlzeiten auch nach dem Neuladen der Seite erhalten und sind in der deployten Version verfügbar.
+* **Wo umgesetzt:**
+
+  * **Frontend:** Mahlzeiten werden über die App angezeigt, erstellt und gelöscht.
+  * **Backend:** SvelteKit-API-Routen unter `/api/meals` und `/api/meals/[meal_id]`.
+  * **Datenbank:** MongoDB Atlas mit einer Collection für Mahlzeiten.
+* **Referenz:** Beschreibung in Kapitel 3.4.2 Umsetzung (Technik), Seiten `/meals`, `/meals/new` und Detailseiten.
+* **Aus Evaluation abgeleitet?:** Teilweise. Die Evaluation zeigte, dass eigene Mahlzeiten und eine stabile Datenbasis wichtig sind. Die MongoDB-Anbindung verbessert die technische Qualität und Persistenz des Prototyps.
+
+### 4.7 Persistente Mahlzeitenerfassung
+
+* **Beschreibung & Nutzen:** Nutzer können eigene Mahlzeiten erfassen. Diese werden in MongoDB gespeichert und erscheinen danach in der Mahlzeitenübersicht. Dadurch wirkt der Prototyp weniger statisch und unterstützt den zentralen Workflow besser.
+* **Wo umgesetzt:** Formular auf `/meals/new`, API-Endpunkt `/api/meals`, MongoDB Collection `meals`.
+* **Referenz:** Seite „Neue Mahlzeit“, Mahlzeitenübersicht und Detailseite.
+* **Aus Evaluation abgeleitet?:** Ja, weil die Erfassung eigener Mahlzeiten und verständliche Eingaben als wichtig für die Nutzung erkannt wurden.
+
+
 ## 5. Projektorganisation [Optional]
 
 * **Repository & Struktur:**
@@ -484,15 +520,12 @@ https://github.com/Maaru43/budgetbite
 Die Projektstruktur folgt einer typischen SvelteKit-Struktur:
 
 * `src/routes`: Seiten und Routen der App
-
-* `src/lib`: Daten, Stores und wiederverwendbare Logik
-
+* `src/routes/api`: API-Routen für Mahlzeitendaten
+* `src/lib/server`: serverseitige Datenbankverbindung zu MongoDB
+* `src/lib`: Daten, Stores, Komponenten und wiederverwendbare Logik
 * `src/app.css`: globales Styling
-
 * `static`: statische Assets
-
 * `README.md`: Projektdokumentation
-
 * `netlify.toml`: Netlify-Konfiguration
 
 * **Issue-Management:**
@@ -547,6 +580,10 @@ KI wurde unterstützend eingesetzt für:
 * Unterstützung bei Git-, GitHub- und Netlify-Schritten
 * Formulierung und Strukturierung der README-Dokumentation
 * Vorbereitung der Usability-Auswertung
+* Einbau der MongoDB-Anbindung
+* Debugging der Netlify Environment Variables
+* Fehlerbehebung beim Netlify Build und bei der serverseitigen Datenbankverbindung
+* Anpassung der README-Dokumentation nach der finalen technischen Umsetzung
 
 Teile des Codes und der Dokumentation wurden mit KI-Unterstützung erstellt oder überarbeitet. Die Ergebnisse wurden schrittweise geprüft, angepasst und getestet.
 
